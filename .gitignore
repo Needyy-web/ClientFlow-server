@@ -2,3 +2,6 @@
 .venv/
 __pycache__/
 *.pyc
+.idea/
+.idea_backup/
+demo_storage/
