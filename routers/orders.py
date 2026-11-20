@@ -34,7 +34,7 @@ def get_order(order_id: int):
             raise HTTPException(status_code=404, detail="Order not found")
         return dict(order)
 
-@router.post('/orders')
+@router.post('')
 def create_order(order: OrderCreate):
     with engine.begin() as connection:
         query = text(
