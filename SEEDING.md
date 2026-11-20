@@ -38,4 +38,4 @@ Existing manually created rows remain in place. On a second run, these demo reco
 - Invite tokens are random and are never emailed. The seeder is for development, **not production**.
 - Everything is written within one SQL transaction. On database error, SQL writes roll back. Demo files created on disk may remain and can be reused.
 - An existing record matching a demo key is left untouched: the script will not overwrite manually edited values.
-- The repository's current `main.py` still includes old in-memory `/orders` handlers; replace them with PostgreSQL-backed endpoints before connecting React.
+- Order and client-company routes are PostgreSQL-backed and live in `routers/orders.py` and `routers/companies.py`.
