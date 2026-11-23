@@ -22,8 +22,8 @@ def get_client_companies():
 def create_client_companies(client_company: ClientCompanyCreate):
     with engine.begin() as connection:
         query = text(
-            "INSERT INTO client_companies (name, organization_id) "
-                     "VALUES (:name, :organization_id) "
+            "INSERT INTO client_companies (name, organization_id, email, notes, phone, contact_name) "
+                     "VALUES (:name, :organization_id, :email, :notes, :phone, :contact_name) "
             "RETURNING id, name, organization_id"
                      )
         result = connection.execute(query, client_company.model_dump())

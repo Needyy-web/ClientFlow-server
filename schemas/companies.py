@@ -5,7 +5,10 @@ from pydantic import BaseModel
 
 class ClientCompanyCreate(BaseModel):
     name: str
-    organization_id: int
+    email: str | None = None
+    phone: str | None = None
+    notes: str | None = None
+    contact_name: str | None = None
 
 
 class ClientCompanyUpdate(BaseModel):
