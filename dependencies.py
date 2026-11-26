@@ -1,6 +1,6 @@
 """Session token """
 
-from fastapi import Cookie, HTTPException
+from fastapi import Cookie, HTTPException, Depends
 from sqlalchemy import text
 from database import engine
 import hashlib
@@ -29,3 +29,12 @@ def get_current_user(session_token: str | None = Cookie(default=None)):
             raise HTTPException(status_code=401, detail="Invalid token")
         return dict(token_user)
 
+def require_admin(user=Depends(get_current_user)):
+    if user["role"] not in ("Owner", "Admin"):
+        raise HTTPException(status_code=403, detail="Not allowed")
+    return user
+
+def require_owner(user=Depends(get_current_user)):
+    if user["role"] != "Owner":
+        raise HTTPException(status_code=403, detail="Not allowed")
+    return user

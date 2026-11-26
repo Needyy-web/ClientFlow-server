@@ -1,64 +1,63 @@
 """Organizations endpoints."""
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy import text
 import bcrypt
 
 from database import engine
 from schemas.organizations import OrganizationCreate, OrganizationUpdate, OrganizationRegister
 
+from dependencies import get_current_user, require_admin, require_owner
+
 router = APIRouter(prefix="/organizations", tags=["Organizations"])
 
+
 @router.get('')
-def get_organizations():
+def get_organizations(user=Depends(get_current_user)):
     with engine.connect() as connection:
-        query = text("SELECT id, name, created_at FROM organizations; ")
-        result = connection.execute(query)
-        organizations = result.mappings().all()
-
-        return [dict(organization) for organization in organizations]
-
-@router.post('')
-def create_organization(organization: OrganizationCreate):
-    with engine.begin() as connection:
         query = text(
-            "INSERT INTO organizations (name) "
-            "VALUES (:name) "
-            "RETURNING name, id, created_at"
+            "SELECT organizations.id, organizations.name, organizations.created_at FROM organizations "
+            "WHERE id = :organization_id "
         )
-        result = connection.execute(query, organization.model_dump())
-        create_organization = result.mappings().one_or_none()
-        if create_organization is None:
-            raise HTTPException(status_code=404, detail="Organization not found.")
-        return dict(create_organization)
+        result = connection.execute(query, {"organization_id": user["organization_id"]})
+        organization = result.mappings().one_or_none()
+
+        if organization is None:
+            raise HTTPException(status_code=404, detail="Organization not found")
+        return dict(organization)
+
 
 @router.patch('/{organization_id}')
-def patched_organization(organization_id: int, organization: OrganizationUpdate):
+def patched_organization(organization_id: int, organization: OrganizationUpdate, user=Depends(require_admin)):
     with engine.begin() as connection:
         query = text(
             "UPDATE organizations "
             "SET name = :name "
-            "WHERE id = :id "
+            "WHERE organizations.id = :id "
+            "AND id = :organization_id "
             "RETURNING name, id, created_at"
         )
         result = connection.execute(query, {
             "name": organization.name,
-            "id": organization_id
+            "id": organization_id,
+            "organization_id": user["organization_id"]
         })
         patched_organization = result.mappings().one_or_none()
         if patched_organization is None:
             raise HTTPException(status_code=404, detail="Organization not patched.")
         return dict(patched_organization)
 
+
 @router.delete('/{organization_id}')
-def delete_organization(organization_id: int):
+def delete_organization(organization_id: int, user=Depends(require_owner)):
     with engine.begin() as connection:
         query = text(
             "DELETE FROM organizations "
-            "WHERE id = :id "
+            "WHERE organizations.id = :id "
+            "AND organizations.id = :organization_id "
             "RETURNING name, id, created_at"
         )
-        result = connection.execute(query, {"id": organization_id})
+        result = connection.execute(query, {"id": organization_id, "organization_id": user["organization_id"]})
         deleted_organization = result.mappings().one_or_none()
         if deleted_organization is None:
             raise HTTPException(status_code=404, detail="Organization not deleted.")
@@ -70,6 +69,7 @@ def hash_password(password: str):
     salt = bcrypt.gensalt()
     hashed_password = bcrypt.hashpw(password_bytes, salt)
     return hashed_password.decode("utf-8")
+
 
 @router.post("/register")
 def register_organization(organization: OrganizationRegister):
