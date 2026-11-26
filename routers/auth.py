@@ -1,6 +1,6 @@
 """Authentication endpoints"""
 
-from fastapi import APIRouter, HTTPException, Response
+from fastapi import APIRouter, HTTPException, Response, Depends, Cookie
 from schemas.auth import LoginRequest
 from sqlalchemy import text
 from database import engine
@@ -8,6 +8,7 @@ import bcrypt
 import secrets
 import hashlib
 from datetime import datetime, timedelta, timezone
+from dependencies import get_current_user
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -44,7 +45,6 @@ def login(request: LoginRequest, response: Response):
             "expires_at": expires_at
         })
 
-
     response.set_cookie(
         key="session_token",
         value=token,
@@ -53,8 +53,31 @@ def login(request: LoginRequest, response: Response):
         samesite="lax",
         max_age=30 * 24 * 60 * 60,
         path="/"
-      )
+    )
     return {
-    "message": "Logged in successfully",
-    "user_id": user["id"]
+        "message": "Logged in successfully",
+        "user_id": user["id"]
+    }
+
+
+@router.get("/me")
+def me(user=Depends(get_current_user)):
+    return user
+
+
+@router.post("/logout")
+def logout(response: Response, session_token: str | None = Cookie(default=None)):
+    with engine.begin() as connection:
+        if session_token:
+            token_hash = hashlib.sha256(session_token.encode("utf-8")).hexdigest()
+            query = text(
+                "DELETE FROM sessions "
+                "WHERE token_hash = :token_hash "
+            )
+            connection.execute(query, {"token_hash": token_hash})
+
+    response.delete_cookie(key="session_token", path="/")
+
+    return {
+        "message": "Logged out successfully",
     }

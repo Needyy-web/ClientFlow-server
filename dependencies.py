@@ -1,10 +1,9 @@
 """Session token """
 
-from fastapi import Cookie, HTTPException, Depends
+from fastapi import Cookie, HTTPException
 from sqlalchemy import text
 from database import engine
 import hashlib
-from datetime import datetime, timedelta, timezone
 
 
 def get_current_user(session_token: str | None = Cookie(default=None)):
